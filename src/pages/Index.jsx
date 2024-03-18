@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Button, Heading, VStack, HStack, Grid, GridItem, useInterval } from "@chakra-ui/react";
-import { FaArrowUp, FaArrowLeft, FaArrowRight, FaArrowDown } from "react-icons/fa";
+import { Box, Button, Heading, VStack, HStack, Grid, GridItem, useInterval, Text } from "@chakra-ui/react";
+import { FaArrowUp, FaArrowLeft, FaArrowRight, FaArrowDown, FaPlay, FaPause } from "react-icons/fa";
 
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
@@ -40,16 +40,31 @@ const getRandomShape = () => {
 };
 
 const Index = () => {
-  const [board, setBoard] = useState(
-    Array(BOARD_HEIGHT)
-      .fill()
-      .map(() => Array(BOARD_WIDTH).fill(0)),
-  );
-  const [currentShape, setCurrentShape] = useState(getRandomShape());
-  const [currentPosition, setCurrentPosition] = useState({ row: 0, col: 4 });
+  const [board, setBoard] = useState(null);
+  const [currentShape, setCurrentShape] = useState(null);
+  const [nextShape, setNextShape] = useState(null);
+  const [currentPosition, setCurrentPosition] = useState(null);
   const [score, setScore] = useState(0);
+  const [level, setLevel] = useState(1);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
   const [speed, setSpeed] = useState(1000);
+
+  const resetGame = () => {
+    setBoard(
+      Array(BOARD_HEIGHT)
+        .fill()
+        .map(() => Array(BOARD_WIDTH).fill(0)),
+    );
+    setCurrentShape(getRandomShape());
+    setNextShape(getRandomShape());
+    setCurrentPosition({ row: 0, col: 4 });
+    setScore(0);
+    setLevel(1);
+    setIsGameOver(false);
+    setIsPaused(false);
+    setSpeed(1000);
+  };
 
   const moveDown = useCallback(() => {
     setCurrentPosition((prev) => ({
@@ -112,18 +127,9 @@ const Index = () => {
   }, []);
 
   const checkGameOver = useCallback(() => {
-    const isOverlap = currentShape.some((row, rowIndex) =>
-      row.some((cell, colIndex) => {
-        if (cell) {
-          const boardRow = currentPosition.row + rowIndex;
-          const boardCol = currentPosition.col + colIndex;
-          return board[boardRow]?.[boardCol];
-        }
-        return false;
-      }),
-    );
-    if (isOverlap) {
+    if (currentPosition.row === 0) {
       setIsGameOver(true);
+      setIsPaused(true);
     }
   }, [board, currentPosition, currentShape]);
 
@@ -173,7 +179,8 @@ const Index = () => {
   }, [moveDown]);
 
   useEffect(() => {
-    if (score > 0 && score % 50 === 0) {
+    if (score > 0 && score % 100 === 0) {
+      setLevel((prevLevel) => prevLevel + 1);
       setSpeed((prevSpeed) => prevSpeed * 0.9);
     }
   }, [score]);
@@ -186,24 +193,41 @@ const Index = () => {
       <HStack spacing={8}>
         <Box border="2px solid" borderColor="gray.200" p={4}>
           <Grid templateColumns={`repeat(${BOARD_WIDTH}, ${BLOCK_SIZE}px)`} gap={1}>
-            {board.map((row, rowIndex) => row.map((cell, colIndex) => <GridItem key={`${rowIndex}-${colIndex}`} bg={cell || (currentShape.some((shapeRow, shapeRowIndex) => shapeRow.some((shapeCell, shapeColIndex) => shapeCell && rowIndex === currentPosition.row + shapeRowIndex && colIndex === currentPosition.col + shapeColIndex)) ? "blue.500" : "gray.100")} w={BLOCK_SIZE} h={BLOCK_SIZE} />))}
+            {board?.map((row, rowIndex) => row.map((cell, colIndex) => <GridItem key={`${rowIndex}-${colIndex}`} bg={cell || (currentShape?.some((shapeRow, shapeRowIndex) => shapeRow.some((shapeCell, shapeColIndex) => shapeCell && rowIndex === currentPosition.row + shapeRowIndex && colIndex === currentPosition.col + shapeColIndex)) ? "blue.500" : "gray.100")} w={BLOCK_SIZE} h={BLOCK_SIZE} />))}
           </Grid>
         </Box>
         <VStack spacing={4} align="start">
+          <Button leftIcon={<FaPlay />} onClick={resetGame} disabled={!isGameOver && !isPaused}>
+            Start Game
+          </Button>
+          <Button leftIcon={<FaPause />} onClick={() => setIsPaused((prev) => !prev)} disabled={isGameOver || isPaused}>
+            Pause Game
+          </Button>
           <Heading as="h2" size="lg">
             Score: {score}
           </Heading>
+          <Heading as="h2" size="lg">
+            Level: {level}
+          </Heading>
+          <Box border="2px solid" borderColor="gray.200" p={4}>
+            <Heading as="h3" size="md" mb={2}>
+              Next Shape
+            </Heading>
+            <Grid templateColumns={`repeat(4, ${BLOCK_SIZE}px)`} gap={1}>
+              {nextShape?.map((row, rowIndex) => row.map((cell, colIndex) => <GridItem key={`${rowIndex}-${colIndex}`} bg={cell ? "blue.500" : "gray.100"} w={BLOCK_SIZE} h={BLOCK_SIZE} />))}
+            </Grid>
+          </Box>
           <VStack spacing={2} align="start">
-            <Button leftIcon={<FaArrowUp />} onClick={rotateShape} disabled={isGameOver}>
+            <Button leftIcon={<FaArrowUp />} onClick={rotateShape} disabled={isGameOver || isPaused}>
               Rotate
             </Button>
-            <Button leftIcon={<FaArrowLeft />} onClick={moveLeft} disabled={isGameOver}>
+            <Button leftIcon={<FaArrowLeft />} onClick={moveLeft} disabled={isGameOver || isPaused}>
               Left
             </Button>
-            <Button leftIcon={<FaArrowRight />} onClick={moveRight} disabled={isGameOver}>
+            <Button leftIcon={<FaArrowRight />} onClick={moveRight} disabled={isGameOver || isPaused}>
               Right
             </Button>
-            <Button leftIcon={<FaArrowDown />} onClick={moveDown} disabled={isGameOver}>
+            <Button leftIcon={<FaArrowDown />} onClick={moveDown} disabled={isGameOver || isPaused}>
               Down
             </Button>
           </VStack>
